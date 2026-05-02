@@ -37,7 +37,7 @@ camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.
 camerax-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camerax-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 ort-mobile = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "ortMobile" }
-exif-interface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifInterface" }
+androidx-exif = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifInterface" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
