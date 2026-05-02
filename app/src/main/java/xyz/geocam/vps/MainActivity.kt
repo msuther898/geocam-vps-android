@@ -53,10 +53,16 @@ class MainActivity : ComponentActivity() {
                             onClose = { screen = "map" },
                             onCheckUpdate = { vm.checkForUpdate() },
                         )
+                        "photo" -> PhotoMatchScreen(
+                            vm = vm,
+                            onClose = { screen = "map" },
+                            onMatchReady = { screen = "map" },
+                        )
                         else -> MapScreen(
                             vm = vm,
                             sessionProvider = { ar.session },
                             onOpenHelp = { screen = "help" },
+                            onOpenPhoto = { screen = "photo" },
                         )
                     }
                 }

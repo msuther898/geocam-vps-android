@@ -9,8 +9,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
+import xyz.geocam.vps.photo.MatchResult
+import xyz.geocam.vps.photo.PhotoMatcher
+import xyz.geocam.vps.photo.StubMatcher
 import xyz.geocam.vps.sensors.CompassSource
 import xyz.geocam.vps.update.UpdateState
 import xyz.geocam.vps.update.Updater
@@ -56,6 +60,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _arError = MutableStateFlow<String?>(null)
     val arError: StateFlow<String?> = _arError.asStateFlow()
+
+    @Volatile var photoMatcher: PhotoMatcher = StubMatcher()
+
+    private val _matchResult = MutableStateFlow<MatchResult?>(null)
+    val matchResult: StateFlow<MatchResult?> = _matchResult.asStateFlow()
+
+    private val _matchInProgress = MutableStateFlow(false)
+    val matchInProgress: StateFlow<Boolean> = _matchInProgress.asStateFlow()
+
+    private val _searchCenter = MutableStateFlow(LatLng(33.872161, -118.392340))
+    val searchCenter: StateFlow<LatLng> = _searchCenter.asStateFlow()
 
     @Volatile private var lastArX: Float = 0f
     @Volatile private var lastArY: Float = 0f
@@ -112,6 +127,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setArError(reason: String?) { _arError.value = reason }
+
+    fun setSearchCenter(latLng: LatLng) { _searchCenter.value = latLng }
+
+    fun runPhotoMatch(photo: File) {
+        viewModelScope.launch {
+            _matchInProgress.value = true
+            try {
+                _matchResult.value = photoMatcher.match(
+                    photo = photo,
+                    searchCenter = _searchCenter.value,
+                    searchRadiusMeters = 500.0,
+                    headingRad = _heading.value,
+                )
+            } finally {
+                _matchInProgress.value = false
+            }
+        }
+    }
+
+    fun acceptMatch(rank: Int) {
+        val r = _matchResult.value ?: return
+        val c = r.candidates.firstOrNull { it.rank == rank } ?: return
+        placeAnchor(c.latLng)
+        _matchResult.value = null
+    }
+
+    fun dismissMatch() { _matchResult.value = null }
 
     fun toggleFeaturePoints() {
         _showFeaturePoints.value = !_showFeaturePoints.value

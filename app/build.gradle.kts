@@ -114,4 +114,10 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.moshi)
     implementation(libs.moshi.kotlin)
+
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.ort.mobile)
 }

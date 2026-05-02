@@ -45,6 +45,7 @@ fun MapScreen(
     vm: MainViewModel,
     sessionProvider: () -> com.google.ar.core.Session?,
     onOpenHelp: () -> Unit,
+    onOpenPhoto: () -> Unit,
 ) {
     val anchor by vm.anchor.collectAsState()
     val pose by vm.pose.collectAsState()
@@ -57,6 +58,7 @@ fun MapScreen(
     val arT by vm.arTranslation.collectAsState()
     val frameFeats by vm.frameFeatureCount.collectAsState()
     val arError by vm.arError.collectAsState()
+    val matchResult by vm.matchResult.collectAsState()
 
     val cameraState: CameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(HERMOSA_DEFAULT, 18f)
@@ -109,6 +111,13 @@ fun MapScreen(
                             )
                         }
                     }
+                    matchResult?.candidates?.forEach { c ->
+                        Marker(
+                            state = MarkerState(position = c.latLng),
+                            title = "#${c.rank}  score=${"%.2f".format(c.score)}",
+                            snippet = "Tap 'Use #${c.rank}' below to set pose",
+                        )
+                    }
                 }
 
                 if (anchor == null) {
@@ -155,11 +164,27 @@ fun MapScreen(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            Button(onClick = onOpenPhoto) { Text("📷 Where am I?") }
             Button(onClick = onOpenHelp) { Text("Help") }
             Button(onClick = vm::reset) { Text("Reset") }
             Button(onClick = vm::checkForUpdate) { Text("Update") }
             Button(onClick = vm::toggleFeaturePoints) {
                 Text(if (showFeaturePoints) "FP: ${featurePoints.size}" else "FP off")
+            }
+        }
+
+        matchResult?.let { r ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 200.dp, start = 12.dp, end = 12.dp)
+                    .fillMaxWidth(),
+            ) {
+                MatchResultsOverlay(
+                    result = r,
+                    onAccept = vm::acceptMatch,
+                    onDismiss = vm::dismissMatch,
+                )
             }
         }
 
