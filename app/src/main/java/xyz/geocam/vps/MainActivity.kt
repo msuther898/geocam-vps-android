@@ -102,12 +102,14 @@ class MainActivity : ComponentActivity() {
                 avail = ArCoreApk.getInstance().checkAvailability(this@MainActivity)
                 tries++
             }
+            val needsInstall = avail == ArCoreApk.Availability.SUPPORTED_NOT_INSTALLED ||
+                avail == ArCoreApk.Availability.SUPPORTED_APK_TOO_OLD
             when {
                 avail == ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE -> {
                     vm.setArError("This device doesn't support ARCore. Photo-match still works.")
                     return@launch
                 }
-                !avail.isInstalled -> {
+                needsInstall -> {
                     try {
                         val status = ArCoreApk.getInstance().requestInstall(
                             this@MainActivity, !requestedArInstall
