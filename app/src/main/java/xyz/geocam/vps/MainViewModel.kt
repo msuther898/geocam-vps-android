@@ -35,20 +35,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _update = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val update: StateFlow<UpdateState> = _update.asStateFlow()
 
+    @Volatile private var lastArX: Float = 0f
+    @Volatile private var lastArY: Float = 0f
+    @Volatile private var lastArZ: Float = 0f
+
     init {
         viewModelScope.launch {
             compass.headings().collect { _heading.value = it }
         }
     }
 
-    fun placeAnchor(latLng: LatLng, arX: Float, arY: Float, arZ: Float) {
-        poseIntegrator.setAnchor(latLng, arX, arY, arZ, _heading.value)
+    fun placeAnchor(latLng: LatLng) {
+        poseIntegrator.setAnchor(latLng, lastArX, lastArY, lastArZ, _heading.value)
         _anchor.value = latLng
         _pose.value = latLng
     }
 
     fun onArPose(arX: Float, arY: Float, arZ: Float, state: TrackingState) {
         _tracking.value = state
+        lastArX = arX; lastArY = arY; lastArZ = arZ
         if (state == TrackingState.TRACKING) {
             poseIntegrator.integrate(arX, arY, arZ)?.let { _pose.value = it }
         }

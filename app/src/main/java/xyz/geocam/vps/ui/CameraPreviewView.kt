@@ -38,6 +38,10 @@ fun CameraPreviewView(
                 preserveEGLContextOnPause = true
                 setEGLContextClientVersion(3)
                 setEGLConfigChooser(8, 8, 8, 8, 16, 0)
+                // Pull this surface above the GoogleMap's SurfaceView so the
+                // camera preview is actually visible in the PIP.
+                setZOrderMediaOverlay(true)
+                holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
                 setRenderer(renderer)
                 renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
                 surfaceRef.value = this

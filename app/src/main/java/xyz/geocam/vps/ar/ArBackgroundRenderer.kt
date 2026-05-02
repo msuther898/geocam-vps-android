@@ -23,6 +23,10 @@ class ArBackgroundRenderer(
     @Volatile var textureId: Int = -1
         private set
 
+    @Volatile private var lastBoundSession: Session? = null
+    @Volatile private var surfaceWidth: Int = 0
+    @Volatile private var surfaceHeight: Int = 0
+
     private var program: Int = 0
     private var positionAttrib: Int = 0
     private var texCoordAttrib: Int = 0
@@ -68,6 +72,8 @@ class ArBackgroundRenderer(
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES20.glViewport(0, 0, width, height)
+        surfaceWidth = width
+        surfaceHeight = height
         sessionProvider()?.setDisplayGeometry(0, width, height)
     }
 
@@ -75,6 +81,14 @@ class ArBackgroundRenderer(
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         val session = sessionProvider() ?: return
         if (textureId == -1) return
+
+        if (session !== lastBoundSession) {
+            session.setCameraTextureName(textureId)
+            if (surfaceWidth > 0 && surfaceHeight > 0) {
+                session.setDisplayGeometry(0, surfaceWidth, surfaceHeight)
+            }
+            lastBoundSession = session
+        }
 
         runCatching {
             val frame = session.update()

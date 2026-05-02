@@ -66,15 +66,7 @@ fun MapScreen(
                 myLocationButtonEnabled = false,
                 rotationGesturesEnabled = true,
             ),
-            onMapClick = { latLng ->
-                sessionProvider()?.let { s ->
-                    runCatching {
-                        val frame = s.update()
-                        val t = frame.camera.pose.translation
-                        vm.placeAnchor(latLng, t[0], t[1], t[2])
-                    }
-                }
-            },
+            onMapClick = { latLng -> vm.placeAnchor(latLng) },
         ) {
             anchor?.let { Marker(state = MarkerState(position = it), title = "Anchor") }
             pose?.let { Marker(state = MarkerState(position = it), title = "Pose") }
