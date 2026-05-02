@@ -1,0 +1,43 @@
+{
+  "center_address": "2404 Prospect Ave, Hermosa Beach, CA",
+  "center_lat": 33.8721611,
+  "center_lon": -118.3923402,
+  "radius_meters": 500,
+  "zoom_levels": [
+    18,
+    19,
+    20
+  ],
+  "layer": "satellite",
+  "scale": "scaleFactor1x",
+  "tile_size": 256,
+  "tile_count": 1409,
+  "fetched_at": "2026-05-02T20:11:01Z",
+  "counts": {
+    "ok": 1409,
+    "cached": 0,
+    "404": 0,
+    "error": 0
+  },
+  "bbox_tiles": {
+    "18": [
+      44857,
+      104826,
+      44865,
+      104834
+    ],
+    "19": [
+      89714,
+      209653,
+      89730,
+      209668
+    ],
+    "20": [
+      179429,
+      419306,
+      179461,
+      419337
+    ]
+  },
+  "license_note": "Google Map Tiles API. Research/prototype only. Do not redistribute tiles or derived embeddings."
+}
