@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import xyz.geocam.vps.photo.Confidence
 import xyz.geocam.vps.photo.MatchResult
 
 @Composable
@@ -36,10 +37,20 @@ fun MatchResultsOverlay(
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(
-            "Match results · ${result.backendName} · ${result.inferenceMs} ms",
-            color = Color(0xFFCBD5E1), fontSize = 12.sp,
-        )
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            ConfidenceBadge(result.confidence)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "${result.backendName} · ${result.inferenceMs} ms · margin ${"%.3f".format(result.topMargin)}",
+                color = Color(0xFFCBD5E1), fontSize = 11.sp,
+            )
+        }
+        if (result.confidence == Confidence.LOW) {
+            Text(
+                "Low confidence — try an elevated angle, more landmark in frame, or move outside the cached region.",
+                color = Color(0xFFF59E0B), fontSize = 11.sp,
+            )
+        }
         result.candidates.forEach { c ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -65,5 +76,22 @@ fun MatchResultsOverlay(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = onDismiss) { Text("Dismiss", color = Color(0xFF94A3B8)) }
         }
+    }
+}
+
+@Composable
+private fun ConfidenceBadge(c: Confidence) {
+    val (bg, fg, label) = when (c) {
+        Confidence.HIGH -> Triple(Color(0xFF052E1A), Color(0xFF22C55E), "HIGH")
+        Confidence.MEDIUM -> Triple(Color(0xFF3F2A05), Color(0xFFFBBF24), "MEDIUM")
+        Confidence.LOW -> Triple(Color(0xFF3F0A0A), Color(0xFFEF4444), "LOW")
+    }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(bg)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    ) {
+        Text(label, color = fg, fontSize = 10.sp)
     }
 }

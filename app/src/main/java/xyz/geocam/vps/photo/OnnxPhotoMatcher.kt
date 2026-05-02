@@ -3,9 +3,11 @@ package xyz.geocam.vps.photo
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import ai.onnxruntime.providers.NNAPIFlags
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +17,7 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import java.util.EnumSet
 import kotlin.math.sqrt
 
 /**
@@ -33,7 +36,8 @@ import kotlin.math.sqrt
  */
 class OnnxPhotoMatcher(private val context: Context) : PhotoMatcher {
 
-    override val name = "dinov2-s-int8"
+    @Volatile private var actualBackend: String = "init"
+    override val name: String get() = actualBackend
 
     private val env: OrtEnvironment by lazy { OrtEnvironment.getEnvironment() }
     private val session: OrtSession by lazy { loadSession() }
@@ -46,11 +50,25 @@ class OnnxPhotoMatcher(private val context: Context) : PhotoMatcher {
     private fun loadSession(): OrtSession {
         val bytes = context.assets.open("ml/ground_encoder_int8.onnx").use { it.readBytes() }
         val opts = OrtSession.SessionOptions().apply {
-            setIntraOpNumThreads(2)
+            setIntraOpNumThreads(4)
             setInterOpNumThreads(1)
         }
+        // Try NNAPI first (Tensor G2 routes ops to TPU/GPU/DSP). USE_FP16 lets
+        // the accelerator drop FP32 ops to half-precision for speed. ORT
+        // automatically partitions: ops NNAPI doesn't support fall back to CPU.
+        var nnapiOk = false
+        runCatching {
+            opts.addNnapi(EnumSet.of(NNAPIFlags.USE_FP16))
+            nnapiOk = true
+            Log.i(TAG, "NNAPI EP added (USE_FP16)")
+        }.onFailure {
+            Log.w(TAG, "NNAPI EP unavailable, CPU only", it)
+        }
+        actualBackend = if (nnapiOk) "dinov2-base-int8 (NNAPI+CPU)" else "dinov2-base-int8 (CPU)"
         return env.createSession(bytes, opts)
     }
+
+    companion object { private const val TAG = "OnnxPhotoMatcher" }
 
     private fun loadEmbeddings(): FloatArray {
         val bytes = context.assets.open("ml/aerial_embeddings.bin").use { it.readBytes() }
@@ -111,12 +129,28 @@ class OnnxPhotoMatcher(private val context: Context) : PhotoMatcher {
             )
         }
 
+        // Confidence gating: combine top-1 cosine + margin to top-2.
+        // Cosine threshold catches "is this even similar to anything?" — DINOv2
+        // L2-normed embeddings tend to land in [0.3, 0.95] for in-domain images.
+        // Margin catches "is the top-1 clearly the best, or near-tied?" — small
+        // margin = ambiguous, large margin = confident pick.
+        val top1 = candidates.getOrNull(0)?.score ?: 0f
+        val top2 = candidates.getOrNull(1)?.score ?: 0f
+        val margin = top1 - top2
+        val confidence = when {
+            top1 > 0.70f && margin > 0.04f -> Confidence.HIGH
+            top1 > 0.55f || margin > 0.025f -> Confidence.MEDIUM
+            else -> Confidence.LOW
+        }
+
         MatchResult(
             photo = photo,
             capturedHeadingRad = headingRad,
             candidates = candidates,
             backendName = name,
             inferenceMs = System.currentTimeMillis() - started,
+            confidence = confidence,
+            topMargin = margin,
         )
     }
 

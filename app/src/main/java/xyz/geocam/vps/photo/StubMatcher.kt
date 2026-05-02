@@ -41,6 +41,8 @@ class StubMatcher : PhotoMatcher {
             candidates = candidates,
             backendName = name,
             inferenceMs = System.currentTimeMillis() - started,
+            confidence = Confidence.LOW,
+            topMargin = 0f,
         )
     }
 }

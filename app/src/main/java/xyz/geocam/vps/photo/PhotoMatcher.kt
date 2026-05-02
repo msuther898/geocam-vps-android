@@ -3,6 +3,8 @@ package xyz.geocam.vps.photo
 import com.google.android.gms.maps.model.LatLng
 import java.io.File
 
+enum class Confidence { HIGH, MEDIUM, LOW }
+
 data class MatchCandidate(
     val rank: Int,
     val latLng: LatLng,
@@ -18,6 +20,8 @@ data class MatchResult(
     val candidates: List<MatchCandidate>,
     val backendName: String,
     val inferenceMs: Long,
+    val confidence: Confidence = Confidence.LOW,
+    val topMargin: Float = 0f,
 )
 
 /**

@@ -1,6 +1,6 @@
 {
- "encoder": "vit_small_patch14_dinov2.lvd142m_int8",
- "embedding_dim": 384,
+ "encoder": "vit_base_patch14_dinov2.lvd142m_int8",
+ "embedding_dim": 768,
  "input_size": 224,
  "rows": 272,
  "zoom": 19,
