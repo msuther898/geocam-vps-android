@@ -46,11 +46,24 @@ android {
         }
     }
 
+    signingConfigs {
+        getByName("debug") {
+            val stableKs = rootProject.file("keystore/debug.keystore")
+            if (stableKs.exists()) {
+                storeFile = stableKs
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = false
