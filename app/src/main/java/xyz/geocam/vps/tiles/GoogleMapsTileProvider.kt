@@ -2,8 +2,10 @@ package xyz.geocam.vps.tiles
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -26,10 +28,8 @@ class GoogleMapsTileProvider(private val apiKey: String) : TileProvider {
 
     private suspend fun ensureSession(): String? = withContext(Dispatchers.IO) {
         session?.let { return@withContext it }
-        val body = okhttp3.RequestBody.create(
-            okhttp3.MediaType.get("application/json"),
-            """{"mapType":"satellite","language":"en-US","region":"US","scale":"scaleFactor1x"}"""
-        )
+        val body = """{"mapType":"satellite","language":"en-US","region":"US","scale":"scaleFactor1x"}"""
+            .toRequestBody("application/json".toMediaType())
         val req = Request.Builder()
             .url("https://tile.googleapis.com/v1/createSession?key=$apiKey")
             .post(body)

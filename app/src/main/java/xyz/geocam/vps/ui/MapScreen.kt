@@ -67,11 +67,12 @@ fun MapScreen(
                 rotationGesturesEnabled = true,
             ),
             onMapClick = { latLng ->
-                val s = sessionProvider() ?: return@GoogleMap
-                runCatching {
-                    val frame = s.update()
-                    val t = frame.camera.pose.translation
-                    vm.placeAnchor(latLng, t[0], t[1], t[2])
+                sessionProvider()?.let { s ->
+                    runCatching {
+                        val frame = s.update()
+                        val t = frame.camera.pose.translation
+                        vm.placeAnchor(latLng, t[0], t[1], t[2])
+                    }
                 }
             },
         ) {
