@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GeoCam VPS</string>
+    <string name="status_tracking">Tracking</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_stopped">Stopped</string>
+    <string name="action_help">Help</string>
+    <string name="action_feedback">Feedback</string>
+    <string name="action_check_update">Check for update</string>
+    <string name="action_reset">Reset pose</string>
+    <string name="hint_tap_to_place">Tap the map to set initial pose</string>
+</resources>

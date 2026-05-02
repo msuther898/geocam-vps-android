@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/msuther898/geocam-vps-android/discussions
+    about: Ask a question or share what you built.
