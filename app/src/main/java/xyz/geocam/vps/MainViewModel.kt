@@ -69,6 +69,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _matchInProgress = MutableStateFlow(false)
     val matchInProgress: StateFlow<Boolean> = _matchInProgress.asStateFlow()
 
+    private val _matchError = MutableStateFlow<String?>(null)
+    val matchError: StateFlow<String?> = _matchError.asStateFlow()
+
     private val _searchCenter = MutableStateFlow(LatLng(33.872161, -118.392340))
     val searchCenter: StateFlow<LatLng> = _searchCenter.asStateFlow()
 
@@ -133,6 +136,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun runPhotoMatch(photo: File) {
         viewModelScope.launch {
             _matchInProgress.value = true
+            _matchError.value = null
             try {
                 _matchResult.value = photoMatcher.match(
                     photo = photo,
@@ -140,6 +144,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     searchRadiusMeters = 500.0,
                     headingRad = _heading.value,
                 )
+            } catch (t: Throwable) {
+                _matchError.value = t.message ?: t::class.java.simpleName
             } finally {
                 _matchInProgress.value = false
             }

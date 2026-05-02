@@ -120,4 +120,5 @@ dependencies {
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
     implementation(libs.ort.mobile)
+    implementation(libs.exif.interface)
 }

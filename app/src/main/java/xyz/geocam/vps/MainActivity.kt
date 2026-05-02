@@ -18,8 +18,11 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import xyz.geocam.vps.ar.ArSessionManager
+import xyz.geocam.vps.photo.OnnxPhotoMatcher
+import xyz.geocam.vps.photo.StubMatcher
 import xyz.geocam.vps.ui.HelpScreen
 import xyz.geocam.vps.ui.MapScreen
+import xyz.geocam.vps.ui.PhotoMatchScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -35,6 +38,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ar = ArSessionManager(this)
+
+        vm.photoMatcher = runCatching { OnnxPhotoMatcher(applicationContext) }
+            .onFailure { android.util.Log.e("MainActivity", "ONNX matcher init failed", it) }
+            .getOrElse { StubMatcher() }
 
         setContent {
             MaterialTheme {
