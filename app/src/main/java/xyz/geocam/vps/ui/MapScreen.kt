@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,10 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
@@ -36,7 +37,6 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.ar.core.TrackingState
 import xyz.geocam.vps.MainViewModel
-import xyz.geocam.vps.update.UpdateState
 
 private val HERMOSA_DEFAULT = LatLng(33.872161, -118.392340)
 
@@ -53,65 +53,94 @@ fun MapScreen(
     val heading by vm.heading.collectAsState()
     val featurePoints by vm.featurePoints.collectAsState()
     val showFeaturePoints by vm.showFeaturePoints.collectAsState()
+    val fps by vm.fps.collectAsState()
+    val arT by vm.arTranslation.collectAsState()
+    val frameFeats by vm.frameFeatureCount.collectAsState()
+    val arError by vm.arError.collectAsState()
 
     val cameraState: CameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(HERMOSA_DEFAULT, 18f)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraState,
-            properties = MapProperties(mapType = MapType.SATELLITE),
-            uiSettings = MapUiSettings(
-                zoomControlsEnabled = false,
-                compassEnabled = true,
-                myLocationButtonEnabled = false,
-                rotationGesturesEnabled = true,
-            ),
-            onMapClick = { latLng -> vm.placeAnchor(latLng) },
-        ) {
-            anchor?.let { Marker(state = MarkerState(position = it), title = "Anchor") }
-            pose?.let { Marker(state = MarkerState(position = it), title = "Pose") }
-            if (showFeaturePoints) {
-                featurePoints.forEach { p ->
-                    Circle(
-                        center = p,
-                        radius = 0.3,
-                        fillColor = Color(0x9922D3EE),
-                        strokeColor = Color(0x0022D3EE),
-                        strokeWidth = 0f,
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top half: live camera
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .background(Color.Black)
+            ) {
+                CameraPreviewView(
+                    sessionProvider = sessionProvider,
+                    onPose = { x, y, z, state -> vm.onArPose(x, y, z, state) },
+                    onPointCloud = { ids, xyzc -> vm.onPointCloud(ids, xyzc) },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            // Bottom half: satellite map
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraState,
+                    properties = MapProperties(mapType = MapType.SATELLITE),
+                    uiSettings = MapUiSettings(
+                        zoomControlsEnabled = false,
+                        compassEnabled = true,
+                        myLocationButtonEnabled = false,
+                        rotationGesturesEnabled = true,
+                    ),
+                    onMapClick = { latLng -> vm.placeAnchor(latLng) },
+                ) {
+                    anchor?.let { Marker(state = MarkerState(position = it), title = "Anchor") }
+                    pose?.let { Marker(state = MarkerState(position = it), title = "Pose") }
+                    if (showFeaturePoints) {
+                        featurePoints.forEach { p ->
+                            Circle(
+                                center = p,
+                                radius = 0.3,
+                                fillColor = Color(0x9922D3EE),
+                                strokeColor = Color(0x0022D3EE),
+                                strokeWidth = 0f,
+                            )
+                        }
+                    }
+                }
+
+                if (anchor == null) {
+                    Text(
+                        "Tap the map to set initial pose",
+                        color = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xCC0F172A))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                     )
                 }
             }
         }
 
-        // PIP camera preview, bottom-right
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-                .size(96.dp, 128.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black)
-        ) {
-            CameraPreviewView(
-                sessionProvider = sessionProvider,
-                onPose = { x, y, z, state -> vm.onArPose(x, y, z, state) },
-                onPointCloud = { ids, xyzc -> vm.onPointCloud(ids, xyzc) },
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-
-        // Status row, top
+        // Top overlay: status + stats + update banner (sits on top of camera half)
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 24.dp, start = 12.dp, end = 12.dp)
-                .fillMaxSize(0.95f),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             StatusBar(tracking = tracking, heading = heading, anchor = anchor, pose = pose)
+            StatsPanel(
+                fps = fps,
+                arT = arT,
+                frameFeats = frameFeats,
+                trackedFeats = featurePoints.size,
+                arError = arError,
+            )
             UpdateBanner(
                 state = update,
                 onDownload = vm::beginDownload,
@@ -119,7 +148,7 @@ fun MapScreen(
             )
         }
 
-        // Bottom controls
+        // Bottom controls (overlay on map half)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -134,19 +163,6 @@ fun MapScreen(
             }
         }
 
-        if (anchor == null) {
-            Text(
-                "Tap the map to set initial pose",
-                color = Color.White,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xCC0F172A))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            )
-        }
-
-        // Recenter on first anchor
         anchor?.let { a ->
             if (cameraState.position.zoom < 18f) {
                 cameraState.move(CameraUpdateFactory.newLatLngZoom(a, 19f))
@@ -175,6 +191,7 @@ private fun StatusBar(
     }
     Row(
         modifier = Modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(Color(0xCC0F172A))
             .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -182,14 +199,44 @@ private fun StatusBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(modifier = Modifier.size(10.dp).clip(RoundedCornerShape(5.dp)).background(color))
-        Text("AR: $label", color = Color.White)
+        Text("AR: $label", color = Color.White, fontSize = 13.sp)
         val degrees = (heading * 180.0 / Math.PI).toInt().toString().padStart(3, ' ')
-        Text("Hdg: $degrees°", color = Color(0xFF94A3B8))
+        Text("Hdg: $degrees°", color = Color(0xFF94A3B8), fontSize = 13.sp)
         pose?.let {
             Text("${"%.5f".format(it.latitude)}, ${"%.5f".format(it.longitude)}",
-                color = Color(0xFF94A3B8))
+                color = Color(0xFF94A3B8), fontSize = 13.sp)
         }
-        if (anchor == null) Text("(no anchor)", color = Color(0xFFF59E0B))
+        if (anchor == null) Text("(no anchor)", color = Color(0xFFF59E0B), fontSize = 13.sp)
     }
     Spacer(Modifier.height(0.dp))
+}
+
+@Composable
+private fun StatsPanel(
+    fps: Int,
+    arT: FloatArray,
+    frameFeats: Int,
+    trackedFeats: Int,
+    arError: String?,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xCC0F172A))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            "ARCore  ${fps} fps   feats now: $frameFeats   kept: $trackedFeats",
+            color = Color(0xFFCBD5E1), fontSize = 11.sp,
+        )
+        Text(
+            "AR pose  x=${"%.2f".format(arT[0])}  y=${"%.2f".format(arT[1])}  z=${"%.2f".format(arT[2])} m",
+            color = Color(0xFF94A3B8), fontSize = 11.sp,
+        )
+        if (arError != null) {
+            Text("⚠ ARCore: $arError", color = Color(0xFFEF4444), fontSize = 11.sp)
+        }
+    }
 }

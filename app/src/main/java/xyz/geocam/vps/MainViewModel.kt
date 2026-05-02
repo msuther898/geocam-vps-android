@@ -45,10 +45,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _showFeaturePoints = MutableStateFlow(true)
     val showFeaturePoints: StateFlow<Boolean> = _showFeaturePoints.asStateFlow()
 
+    private val _fps = MutableStateFlow(0)
+    val fps: StateFlow<Int> = _fps.asStateFlow()
+
+    private val _arTranslation = MutableStateFlow(floatArrayOf(0f, 0f, 0f))
+    val arTranslation: StateFlow<FloatArray> = _arTranslation.asStateFlow()
+
+    private val _frameFeatureCount = MutableStateFlow(0)
+    val frameFeatureCount: StateFlow<Int> = _frameFeatureCount.asStateFlow()
+
+    private val _arError = MutableStateFlow<String?>(null)
+    val arError: StateFlow<String?> = _arError.asStateFlow()
+
     @Volatile private var lastArX: Float = 0f
     @Volatile private var lastArY: Float = 0f
     @Volatile private var lastArZ: Float = 0f
     @Volatile private var lastFeatureFlushMs: Long = 0L
+
+    private val frameTimes = ArrayDeque<Long>(120)
+    private val frameLock = Any()
 
     init {
         viewModelScope.launch {
@@ -65,15 +80,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun onArPose(arX: Float, arY: Float, arZ: Float, state: TrackingState) {
         _tracking.value = state
         lastArX = arX; lastArY = arY; lastArZ = arZ
+        _arTranslation.value = floatArrayOf(arX, arY, arZ)
+
+        val now = System.currentTimeMillis()
+        val fpsCount = synchronized(frameLock) {
+            frameTimes.addLast(now)
+            while (frameTimes.isNotEmpty() && now - frameTimes.first() > 1000) {
+                frameTimes.removeFirst()
+            }
+            frameTimes.size
+        }
+        _fps.value = fpsCount
+
         if (state == TrackingState.TRACKING) {
             poseIntegrator.integrate(arX, arY, arZ)?.let { _pose.value = it }
         }
     }
 
     fun onPointCloud(ids: IntBuffer, xyzc: FloatBuffer) {
+        val n = ids.remaining()
+        _frameFeatureCount.value = n
         val now = System.currentTimeMillis()
         featureTracker.update(ids, xyzc, now)
-        // Project to lat/lon at most ~2 Hz to keep map recomposition cheap.
         if (now - lastFeatureFlushMs < 500L) return
         lastFeatureFlushMs = now
         if (!poseIntegrator.hasAnchor()) return
@@ -82,6 +110,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         _featurePoints.value = projected
     }
+
+    fun setArError(reason: String?) { _arError.value = reason }
 
     fun toggleFeaturePoints() {
         _showFeaturePoints.value = !_showFeaturePoints.value

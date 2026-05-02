@@ -66,7 +66,12 @@ class MainActivity : ComponentActivity() {
 
     private fun initArSession() {
         lifecycleScope.launch {
-            if (ar.create()) ar.resume()
+            if (ar.create()) {
+                ar.resume()
+                vm.setArError(null)
+            } else {
+                vm.setArError(ar.failureReason ?: "ARCore unavailable")
+            }
         }
     }
 
