@@ -3,6 +3,7 @@ package xyz.geocam.vps.ar
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
+import com.google.ar.core.Frame
 import com.google.ar.core.Session
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
@@ -17,7 +18,7 @@ import java.nio.FloatBuffer
  */
 class ArBackgroundRenderer(
     private val sessionProvider: () -> Session?,
-    private val onFrame: () -> Unit,
+    private val onFrame: (Frame) -> Unit,
 ) : GLSurfaceView.Renderer {
 
     @Volatile var textureId: Int = -1
@@ -120,7 +121,7 @@ class ArBackgroundRenderer(
             GLES20.glDisableVertexAttribArray(positionAttrib)
             GLES20.glDisableVertexAttribArray(texCoordAttrib)
 
-            onFrame()
+            onFrame(frame)
         }
     }
 

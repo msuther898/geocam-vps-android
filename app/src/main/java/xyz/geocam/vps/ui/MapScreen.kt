@@ -26,6 +26,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.CameraPositionState
+import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
@@ -50,6 +51,8 @@ fun MapScreen(
     val tracking by vm.tracking.collectAsState()
     val update by vm.update.collectAsState()
     val heading by vm.heading.collectAsState()
+    val featurePoints by vm.featurePoints.collectAsState()
+    val showFeaturePoints by vm.showFeaturePoints.collectAsState()
 
     val cameraState: CameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(HERMOSA_DEFAULT, 18f)
@@ -70,6 +73,17 @@ fun MapScreen(
         ) {
             anchor?.let { Marker(state = MarkerState(position = it), title = "Anchor") }
             pose?.let { Marker(state = MarkerState(position = it), title = "Pose") }
+            if (showFeaturePoints) {
+                featurePoints.forEach { p ->
+                    Circle(
+                        center = p,
+                        radius = 0.3,
+                        fillColor = Color(0x9922D3EE),
+                        strokeColor = Color(0x0022D3EE),
+                        strokeWidth = 0f,
+                    )
+                }
+            }
         }
 
         // PIP camera preview, bottom-right
@@ -84,6 +98,7 @@ fun MapScreen(
             CameraPreviewView(
                 sessionProvider = sessionProvider,
                 onPose = { x, y, z, state -> vm.onArPose(x, y, z, state) },
+                onPointCloud = { ids, xyzc -> vm.onPointCloud(ids, xyzc) },
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -114,6 +129,9 @@ fun MapScreen(
             Button(onClick = onOpenHelp) { Text("Help") }
             Button(onClick = vm::reset) { Text("Reset") }
             Button(onClick = vm::checkForUpdate) { Text("Update") }
+            Button(onClick = vm::toggleFeaturePoints) {
+                Text(if (showFeaturePoints) "FP: ${featurePoints.size}" else "FP off")
+            }
         }
 
         if (anchor == null) {

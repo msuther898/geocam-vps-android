@@ -12,8 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -68,11 +68,36 @@ fun UpdateBanner(
             Spacer(Modifier.width(8.dp))
             Button(onClick = onInstall) { Text("Install") }
         }
-        is UpdateState.Failed -> Text(
-            "Update check failed: ${state.reason}",
-            color = Color(0xFFEF4444),
-            modifier = modifier.padding(8.dp),
-        )
+        is UpdateState.Failed -> Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xCC0F172A))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("✗ Update check failed: ${state.reason}", color = Color(0xFFEF4444), fontSize = 12.sp)
+        }
+        is UpdateState.UpToDate -> Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xCC0F172A))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("✓ Up to date · v${state.current}", color = Color(0xFF22C55E), fontSize = 12.sp)
+        }
+        is UpdateState.Checking -> Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xCC0F172A))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Checking for updates…", color = Color(0xFF94A3B8), fontSize = 12.sp)
+        }
         else -> {}
     }
 }

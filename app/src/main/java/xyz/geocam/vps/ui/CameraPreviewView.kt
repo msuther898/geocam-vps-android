@@ -9,23 +9,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
+import java.nio.FloatBuffer
+import java.nio.IntBuffer
 import xyz.geocam.vps.ar.ArBackgroundRenderer
 
 @Composable
 fun CameraPreviewView(
     sessionProvider: () -> Session?,
     onPose: (x: Float, y: Float, z: Float, state: TrackingState) -> Unit,
+    onPointCloud: (ids: IntBuffer, xyzc: FloatBuffer) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
+    val pcState = remember { LongArray(1) }  // last-seen point-cloud timestamp
     val renderer = remember {
-        ArBackgroundRenderer(sessionProvider) {
-            val s = sessionProvider() ?: return@ArBackgroundRenderer
+        ArBackgroundRenderer(sessionProvider) { frame ->
+            val cam = frame.camera
+            val t = cam.pose.translation
+            onPose(t[0], t[1], t[2], cam.trackingState)
             runCatching {
-                val frame = s.update()
-                val cam = frame.camera
-                val pose = cam.pose
-                val t = pose.translation
-                onPose(t[0], t[1], t[2], cam.trackingState)
+                val pc = frame.acquirePointCloud()
+                try {
+                    if (pc.timestamp != pcState[0]) {
+                        pcState[0] = pc.timestamp
+                        onPointCloud(pc.ids, pc.points)
+                    }
+                } finally {
+                    pc.release()
+                }
             }
         }
     }

@@ -9,14 +9,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.nio.FloatBuffer
+import java.nio.IntBuffer
 import xyz.geocam.vps.sensors.CompassSource
 import xyz.geocam.vps.update.UpdateState
 import xyz.geocam.vps.update.Updater
+import xyz.geocam.vps.vio.FeaturePointTracker
 import xyz.geocam.vps.vio.PoseIntegrator
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val poseIntegrator = PoseIntegrator()
+    private val featureTracker = FeaturePointTracker()
     private val compass = CompassSource(app)
     private val updater = Updater(app)
 
@@ -35,9 +39,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _update = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val update: StateFlow<UpdateState> = _update.asStateFlow()
 
+    private val _featurePoints = MutableStateFlow<List<LatLng>>(emptyList())
+    val featurePoints: StateFlow<List<LatLng>> = _featurePoints.asStateFlow()
+
+    private val _showFeaturePoints = MutableStateFlow(true)
+    val showFeaturePoints: StateFlow<Boolean> = _showFeaturePoints.asStateFlow()
+
     @Volatile private var lastArX: Float = 0f
     @Volatile private var lastArY: Float = 0f
     @Volatile private var lastArZ: Float = 0f
+    @Volatile private var lastFeatureFlushMs: Long = 0L
 
     init {
         viewModelScope.launch {
@@ -59,10 +70,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun onPointCloud(ids: IntBuffer, xyzc: FloatBuffer) {
+        val now = System.currentTimeMillis()
+        featureTracker.update(ids, xyzc, now)
+        // Project to lat/lon at most ~2 Hz to keep map recomposition cheap.
+        if (now - lastFeatureFlushMs < 500L) return
+        lastFeatureFlushMs = now
+        if (!poseIntegrator.hasAnchor()) return
+        val projected = featureTracker.snapshot().mapNotNull { fp ->
+            poseIntegrator.integrate(fp.x, fp.y, fp.z)
+        }
+        _featurePoints.value = projected
+    }
+
+    fun toggleFeaturePoints() {
+        _showFeaturePoints.value = !_showFeaturePoints.value
+    }
+
     fun reset() {
         poseIntegrator.clear()
+        featureTracker.clear()
         _anchor.value = null
         _pose.value = null
+        _featurePoints.value = emptyList()
     }
 
     fun checkForUpdate() {
