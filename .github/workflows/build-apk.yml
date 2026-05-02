@@ -47,7 +47,7 @@ jobs:
               -dname "CN=GeoCam VPS Debug, O=geocam, L=Hermosa Beach, S=CA, C=US"
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add keystore/debug.keystore
+            git add -f keystore/debug.keystore
             git commit -m "chore(ci): commit stable debug keystore for self-updater install compatibility"
             git push
             echo "Keystore committed; this build will use it."

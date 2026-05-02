@@ -11,6 +11,7 @@ captures/
 *.aab
 *.keystore
 *.jks
+!keystore/debug.keystore
 release/
 .DS_Store
 Thumbs.db
